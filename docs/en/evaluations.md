@@ -1,6 +1,6 @@
 # Assistant evaluations
 
-[Versión en español](../evaluations.md) · [README](../../README.en.md)
+[Versión en español](../evaluations.md) · [README](../../README.md)
 
 ## Running tests and evaluations
 

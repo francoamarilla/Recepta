@@ -1,6 +1,6 @@
 # Setup and configuration
 
-[Versión en español](../setup.md) · [README](../../README.en.md)
+[Versión en español](../setup.md) · [README](../../README.md)
 
 ## Docker Compose (recommended)
 

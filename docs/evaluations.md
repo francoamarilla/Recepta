@@ -1,6 +1,6 @@
 # Evaluaciones del asistente
 
-[English version](en/evaluations.md) · [README](../README.md)
+[English version](en/evaluations.md) · [README](../README.es.md)
 
 ## Ejecución
 

@@ -1,103 +1,103 @@
-# Recepta — Plataforma de gestión de turnos con IA
+# Recepta — AI-Powered Appointment Management
 
-Plataforma SaaS de gestión de turnos que integra un asistente conversacional basado en inteligencia artificial, capaz de consultar disponibilidad y gestionar reservas mediante tool calling.
+SaaS appointment management platform featuring an AI-powered conversational assistant capable of checking availability and managing bookings through tool calling.
 
-El proyecto combina una arquitectura Full Stack con técnicas de ingeniería de IA: integración de LLMs, ejecución controlada de herramientas, evaluaciones automatizadas, guardrails y observabilidad.
+The project combines a full-stack architecture with AI engineering techniques: LLM integration, controlled tool execution, automated evaluations, guardrails, and observability.
 
-**El modelo propone, el backend decide.**
+**The model proposes; the backend decides.**
 
-[Demo en vivo](https://recepta-wheat.vercel.app/login) · [English version](README.en.md)
+[Live Demo](https://recepta-wheat.vercel.app/login) · [Versión en español](README.es.md)
 
-## Problema y solución
+## Problem and solution
 
-Recepta centraliza la gestión de turnos para barberías y permite a sus clientes consultar disponibilidad, reservar, cancelar o reprogramar desde un chat web. El backend valida las operaciones con las reglas de negocio del sistema.
+Recepta centralizes appointment management for barbershops and lets customers check availability, book, cancel or reschedule appointments through a web chat. The backend enforces the system's business rules for each operation.
 
-## Funcionalidades
+## Features
 
-- Agenda, disponibilidad, profesionales y servicios.
-- Administración de clientes y dashboard de actividad y ventas.
-- Asistente conversacional web con herramientas para gestionar turnos.
-- Configuración del asistente por establecimiento, con entorno de pruebas.
-- Bot de botones como alternativa cuando la IA no está disponible.
+- Calendar, availability, professionals and services.
+- Customer management and activity and sales dashboard.
+- Conversational web assistant with appointment-management tools.
+- Per-business assistant configuration and testing playground.
+- Button-based fallback when AI is unavailable.
 
-## Arquitectura
+## Architecture
 
 ```mermaid
 flowchart LR
-    W[Chat web] --> S[Spring Boot: conversaciones]
-    S -->|Contexto y token de agente| A[FastAPI: loop del agente]
+    W[Web chat] --> S[Spring Boot: conversations]
+    S -->|Context and agent token| A[FastAPI: agent loop]
     A <--> L[Claude]
-    A -->|API interna de herramientas| T[Spring Boot: reglas de negocio y RLS]
+    A -->|Internal tool API| T[Spring Boot: business rules and RLS]
     T --> DB[(PostgreSQL)]
-    S -.-> B[Bot de botones: alternativa]
+    S -.-> B[Button-based fallback]
 ```
 
-Spring Boot es responsable de los datos, la autorización y las reglas de negocio. El servicio de IA no accede directamente a PostgreSQL.
+Spring Boot owns the data, authorization and business rules. The AI service never accesses PostgreSQL directly.
 
-- Herramientas tipadas con Pydantic y loop propio con límites de ejecución.
-- Operaciones mediante prepare/commit y política de confirmación según la precisión de la solicitud.
-- Aislamiento por establecimiento mediante Row-Level Security y autenticación JWT.
-- Límites de solicitudes, presupuesto global y por establecimiento, y comprobaciones acotadas de horarios y precios.
-- Registro de modelo, versión de configuración y prompt, tokens, coste, latencia y resultado.
+- Pydantic-typed tools and a custom bounded agent loop.
+- Prepare/commit operations and a confirmation policy based on request precision.
+- Tenant isolation using Row-Level Security and JWT authentication.
+- Rate limits, global and per-tenant budgets, and limited time and price grounding checks.
+- Model, configuration and prompt versions, tokens, cost, latency and outcome logging.
 
-[Arquitectura del asistente](docs/ai-architecture.md) · [Decisiones de arquitectura](docs/adr/)
+[Assistant architecture](docs/en/ai-architecture.md) · [Architecture decisions](docs/adr/) (Spanish)
 
-## Evaluación del asistente
+## Assistant evaluations
 
-Resultados documentados el 18/11/2026, versión del prompt `2026-11-18.3`.
+Documented run: November 18, 2026; prompt version `2026-11-18.3`.
 
-| Modelo | Escenarios superados | Coste promedio por escenario | Latencia promedio por escenario |
+| Model | Passed scenarios | Mean cost per scenario | Mean latency per scenario |
 |---|---:|---:|---:|
-| Claude Haiku 5.5 | 29/29 (100%) | USD 0,00054 | 3,9 s |
+| Claude Haiku 5.5 | 29/29 (100%) | USD 0.00054 | 3.9 s |
 
-Los escenarios utilizan un core simulado, verificaciones deterministas y un LLM juez para evaluar el tono. Las métricas corresponden al escenario completo, no a cada mensaje individual ni a producción.
+Scenarios use a simulated core, deterministic checks and an LLM judge for tone. Metrics apply to the entire scenario, not each individual message or production traffic.
 
-[Metodología y reproducción de evaluaciones](docs/evaluations.md)
+[Evaluation methodology and reproduction](docs/en/evaluations.md)
 
-## Stack tecnológico
+## Tech stack
 
-| Capa | Tecnologías |
+| Layer | Technologies |
 |---|---|
 | Backend | Java 21, Spring Boot 4, JWT |
 | Frontend | React, TypeScript, Vite |
-| IA | Python 3.13, FastAPI, Pydantic, Claude |
-| Datos | PostgreSQL 16, Row-Level Security, Flyway |
-| Infraestructura | Docker Compose, nginx |
-| Evaluaciones | pytest, escenarios YAML, verificaciones deterministas, LLM-as-a-Judge |
+| AI | Python 3.13, FastAPI, Pydantic, Claude |
+| Data | PostgreSQL 16, Row-Level Security, Flyway |
+| Infrastructure | Docker Compose, nginx |
+| Evaluations | pytest, YAML scenarios, deterministic checks, LLM-as-a-Judge |
 
-## Ejecución local
+## Local setup
 
-Requisitos: Docker con Compose. La clave de Anthropic es opcional para ejecutar el proyecto sin IA.
+Requirements: Docker with Compose. An Anthropic key is optional when running without AI.
 
 ```bash
 docker compose up -d --build
 ```
 
-Abrir http://localhost:8081. Para activar la IA, definir `ANTHROPIC_API_KEY` en el entorno antes de iniciar Compose. Para crear el primer establecimiento, configurar el Super Admin según la guía de instalación.
+Open http://localhost:8081. To enable AI, set `ANTHROPIC_API_KEY` in your environment before starting Compose. Configure a super admin to create the first tenant as explained in the setup guide.
 
-[Instalación, variables y alta inicial](docs/setup.md) · [Despliegue de la demo](DEPLOY.md)
+[Setup, environment variables and first tenant](docs/en/setup.md) · [Demo deployment guide](DEPLOY.md) (Spanish)
 
-## Estructura del repositorio
+## Repository structure
 
-- `backend/`: API REST, dominio y motor de conversación.
-- `frontend/`: dashboard y chat público.
-- `ai-service/`: agente, herramientas, pruebas y evaluaciones.
-- `docs/`: documentación técnica y decisiones de arquitectura.
+- `backend/`: REST API, domain and conversation engine.
+- `frontend/`: dashboard and public chat.
+- `ai-service/`: agent, tools, tests and evaluations.
+- `docs/`: technical documentation and architecture decisions.
 
-## Alcance y estado
+## Scope and status
 
-Proyecto de portfolio con demo pública y datos de demostración; no se presentan métricas de uso comercial.
+Portfolio project with a public demo and demonstration data; no commercial usage metrics are claimed.
 
-El chat web es el canal de IA implementado. La integración de WhatsApp dispone de una interfaz de proveedor, pero el adaptador real está pendiente; el proveedor de desarrollo solo registra mensajes salientes. La ventana de cancelación es configurable y su valor de negocio sigue pendiente de validación.
+Web chat is the implemented AI channel. WhatsApp integration has a provider interface, but a real adapter is still pending; the development provider only logs outbound messages. The cancellation window is configurable and the appropriate business value remains pending validation.
 
-La propuesta de arquitectura original conserva el contexto de diseño y distingue decisiones futuras: [propuesta de arquitectura de IA](propuesta-arquitectura-ia.md). Las funcionalidades pos-MVP incluyen roles adicionales, acceso de profesionales, depósitos, lista de espera, campañas, reprogramación masiva y ampliación de la gestión de sucursales y rubros.
+The [original AI architecture proposal](propuesta-arquitectura-ia.md) (Spanish) preserves design context and future decisions. Post-MVP features include additional roles, professional logins, deposits, waitlists, campaigns, bulk rescheduling and expanded branch and business-type management.
 
-## Documentación
+## Documentation
 
-- [Instalación y configuración](docs/setup.md)
-- [Arquitectura del asistente](docs/ai-architecture.md)
-- [Evaluaciones](docs/evaluations.md)
-- [Despliegue](DEPLOY.md)
-- [Decisiones de arquitectura](docs/adr/)
+- [Setup and configuration](docs/en/setup.md)
+- [Assistant architecture](docs/en/ai-architecture.md)
+- [Evaluations](docs/en/evaluations.md)
+- [Deployment](DEPLOY.md) (Spanish)
+- [Architecture decisions](docs/adr/) (Spanish)
 
 [Portfolio](https://francoamarilla.github.io/portfolio/) · [LinkedIn](https://www.linkedin.com/in/franco-maximiliano-amarilla/)

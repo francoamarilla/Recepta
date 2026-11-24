@@ -1,6 +1,6 @@
 # Instalación y configuración
 
-[English version](en/setup.md) · [README](../README.md)
+[English version](en/setup.md) · [README](../README.es.md)
 
 Los valores de desarrollo de Compose no deben utilizarse en producción. No publiques secretos reales.
 

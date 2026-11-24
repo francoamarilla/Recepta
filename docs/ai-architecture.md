@@ -1,6 +1,6 @@
 # Arquitectura del asistente de IA
 
-[English version](en/ai-architecture.md) · [README](../README.md)
+[English version](en/ai-architecture.md) · [README](../README.es.md)
 
 ## Asistente de IA
 

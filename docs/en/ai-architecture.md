@@ -1,6 +1,6 @@
 # AI assistant architecture
 
-[Versión en español](../ai-architecture.md) · [README](../../README.en.md)
+[Versión en español](../ai-architecture.md) · [README](../../README.md)
 
 The model proposes; the backend decides. Spring Boot owns business data and validates actions; the Python service orchestrates the model and tools.
 
