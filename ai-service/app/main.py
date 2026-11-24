@@ -8,7 +8,7 @@ from functools import cache
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 
 from app.agent import run_turn
 from app.contracts import TurnRequest, TurnResponse
@@ -44,7 +44,11 @@ def require_service_token(authorization: Annotated[str | None, Header()] = None)
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
+def health(response: Response) -> dict[str, str]:
+    # The chat checks this from the browser (frontend wakeAi.ts) to know the
+    # service is really up, so the browser must be allowed to read it. Only
+    # this route: nothing in it is secret; /v1/agent/turn stays server-to-server.
+    response.headers["Access-Control-Allow-Origin"] = "*"
     return {"status": "ok"}
 
 
