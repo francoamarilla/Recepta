@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { ChatThread, type ChatReply } from "../chat/ChatThread";
-import { wakeAi } from "../chat/wakeAi";
+import { ensureAiAwake, retryAi, useAiStatus } from "../chat/wakeAi";
 
 // The owner's test chat, always at hand: a floating button with the brand
 // isotype (bottom right, like a site's WhatsApp button) that unfolds a chat
@@ -19,7 +19,7 @@ export function AssistantLauncher({ businessName }: { businessName: string }) {
   const opened = useRef(false);
 
   // Wakes the AI service while the owner is still looking at the dashboard.
-  useEffect(wakeAi, []);
+  const aiStatus = useAiStatus();
 
   // The button disappears when the chat opens, so focus has to move: into
   // the message field on open, back to the button on close.
@@ -32,8 +32,11 @@ export function AssistantLauncher({ businessName }: { businessName: string }) {
     }
   }, [open]);
 
-  const send = (message: string | null): Promise<ChatReply> =>
-    api.post<ChatReply>("/assistant/playground", { sessionId, message: message ?? "" });
+  // Same as the public chat: re-wake after a long pause, then send regardless.
+  const send = async (message: string | null): Promise<ChatReply> => {
+    await ensureAiAwake();
+    return api.post<ChatReply>("/assistant/playground", { sessionId, message: message ?? "" });
+  };
 
   return (
     <>
@@ -52,6 +55,8 @@ export function AssistantLauncher({ businessName }: { businessName: string }) {
           notice="Probá tu asistente como si fueras un cliente. Usa el borrador de la configuración y las reservas son simuladas."
           onRestart={() => setSessionId(crypto.randomUUID())}
           onClose={() => setOpen(false)}
+          aiStatus={aiStatus}
+          onRetryAi={() => void retryAi()}
         />
       </div>
       <button

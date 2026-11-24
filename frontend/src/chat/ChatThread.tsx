@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import type { AiStatus } from "./wakeAi";
 
 // One chat UI, styled like a WhatsApp conversation, for the public customer
 // chat and the owner's playground. The customer always writes first: there
@@ -51,6 +52,11 @@ interface Props {
   onClose?: () => void;
   // Grey notice shown while the thread is empty.
   notice?: string;
+  // AI service state (wakeAi.ts). "waking": say so and hold the send button
+  // (typing stays on). "unavailable": sending works (the button bot answers)
+  // and the visitor can retry the check by hand.
+  aiStatus?: AiStatus;
+  onRetryAi?: () => void;
 }
 
 const time = (d: Date) => d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -81,7 +87,10 @@ export function ChatThread({
   onRestart,
   onClose,
   notice,
+  aiStatus = "ready",
+  onRetryAi,
 }: Props) {
+  const preparing = aiStatus === "waking";
   const [lines, setLines] = useState<Line[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -155,7 +164,7 @@ export function ChatThread({
   function submit(event: FormEvent) {
     event.preventDefault();
     const message = draft.trim();
-    if (!message) return;
+    if (!message || preparing) return;
     setDraft("");
     void deliver(message, null);
   }
@@ -174,7 +183,15 @@ export function ChatThread({
         <img className="wa-avatar" src="/brand/avatar-bot.png" alt="" />
         <div>
           <strong>{title}</strong>
-          <small>{waiting ? "escribiendo…" : "en línea"}</small>
+          <small>
+            {waiting
+              ? "escribiendo…"
+              : preparing
+                ? "conectando…"
+                : aiStatus === "unavailable"
+                  ? "asistente no disponible"
+                  : "en línea"}
+          </small>
         </div>
         <span className="wa-head-actions">
           {onRestart && (
@@ -221,8 +238,25 @@ export function ChatThread({
       </header>
 
       <div className="wa-body" aria-live="polite">
-        {lines.length === 0 && (
+        {lines.length === 0 && aiStatus === "ready" && (
           <p className="wa-notice">{notice ?? `Escribile a ${title} para sacar un turno o hacer una consulta.`}</p>
+        )}
+        {preparing && (
+          <p className="wa-notice" role="status">
+            Estamos iniciando el asistente. Puede tardar hasta un minuto; mientras tanto podés ir escribiendo.
+          </p>
+        )}
+        {aiStatus === "unavailable" && (
+          <div className="wa-notice" role="status">
+            <p>El asistente no está disponible en este momento. Podés escribir igual y te atiende el menú de opciones.</p>
+            {onRetryAi && (
+              <div className="wa-buttons">
+                <button type="button" disabled={waiting} onClick={onRetryAi}>
+                  Reintentar conexión
+                </button>
+              </div>
+            )}
+          </div>
         )}
         {lines.map((line, i) => (
           <div key={i} className="wa-row-group">
@@ -272,7 +306,7 @@ export function ChatThread({
           placeholder={placeholder}
           disabled={disabled}
         />
-        <button type="submit" className="wa-send" aria-label="Enviar" disabled={disabled || waiting || !draft.trim()}>
+        <button type="submit" className="wa-send" aria-label="Enviar" disabled={disabled || preparing || waiting || !draft.trim()}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3.4 20.4 21 12 3.4 3.6 3.4 10.1 15 12 3.4 13.9z" />
           </svg>

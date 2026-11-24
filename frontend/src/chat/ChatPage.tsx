@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { wakeAi } from "./wakeAi";
+import { ensureAiAwake, retryAi, useAiStatus } from "./wakeAi";
 import { ChatThread, type ChatReply, type HistoryMessage } from "./ChatThread";
 
 // Public customer chat with the business's assistant (no login). The
@@ -65,9 +65,9 @@ function TenantChat({ tenantId }: { tenantId: string }) {
   const [info, setInfo] = useState<ChatInfo | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captchaRef = useRef<HTMLDivElement>(null);
+  const aiStatus = useAiStatus();
 
   useEffect(() => {
-    wakeAi();
     api.get<ChatInfo>(`/public/${tenantId}/chat/info`).then(setInfo, () => setInfo(null));
   }, [tenantId]);
 
@@ -90,8 +90,13 @@ function TenantChat({ tenantId }: { tenantId: string }) {
     // Re-runs after "Nueva conversación": a new session needs a new token.
   }, [needsCaptcha, captchaToken]);
 
-  const send = (message: string | null, selectionId: string | null) =>
-    api.post<ChatReply>(`/public/${tenantId}/chat`, { sessionId, message, selectionId, turnstileToken: captchaToken });
+  // After a long pause the AI may have gone back to sleep: wake it first (a
+  // no-op within REWAKE_MS of the last wake). If it doesn't wake, send anyway:
+  // the backend falls back to the button bot.
+  const send = async (message: string | null, selectionId: string | null) => {
+    await ensureAiAwake();
+    return api.post<ChatReply>(`/public/${tenantId}/chat`, { sessionId, message, selectionId, turnstileToken: captchaToken });
+  };
 
   const cancel = (appointmentId: string) =>
     api.post<{ reply: string }>(`/public/${tenantId}/chat/cancel`, { sessionId, appointmentId }).then((r) => r.reply);
@@ -120,6 +125,8 @@ function TenantChat({ tenantId }: { tenantId: string }) {
         placeholder={needsCaptcha && !captchaToken ? "Completá la verificación para escribir" : undefined}
         onRestart={restart}
         onClose={EMBEDDED ? closeWidget : undefined}
+        aiStatus={aiStatus}
+        onRetryAi={() => void retryAi()}
       />
     </div>
   );
