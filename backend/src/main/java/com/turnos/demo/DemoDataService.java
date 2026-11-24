@@ -30,11 +30,16 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -146,7 +151,44 @@ public class DemoDataService {
         }
     }
 
-    private void deleteExisting() {
+    // The startup seed: regenerates only when the demo is missing or at least
+    // maxAge old. Tenant.createdAt is the last regeneration (reset() deletes
+    // the tenant and inserts it again), so a boot within maxAge - Render
+    // waking the free instance, or a deploy while a visitor is using the
+    // demo - leaves their data alone. Same transaction as reset(): the check
+    // and the rebuild commit together.
+    @Transactional
+    public boolean resetIfOlderThan(Duration maxAge) {
+        if (!isConfigured()) {
+            log.warn("Demo profile active but DEMO_ADMIN_EMAIL/DEMO_ADMIN_PASSWORD are unset - skipping seed");
+            return false;
+        }
+        Optional<Instant> seededAt;
+        tenantSessionContext.apply(true, null);
+        try {
+            seededAt = tenantRepository.findAll().stream()
+                    .filter(t -> DEMO_BUSINESS_NAME.equals(t.getBusinessName()))
+                    .map(Tenant::getCreatedAt)
+                    .filter(Objects::nonNull)
+                    .min(Comparator.naturalOrder());
+        } finally {
+            tenantSessionContext.reset();
+        }
+        if (!needsReset(seededAt, Instant.now(), maxAge)) {
+            log.info("Demo data from {} is newer than {} - keeping it", seededAt.get(), maxAge);
+            return false;
+        }
+        reset();
+        return true;
+    }
+
+    static boolean needsReset(Optional<Instant> seededAt, Instant now, Duration maxAge) {
+        return seededAt.map(at -> !at.isAfter(now.minus(maxAge))).orElse(true);
+    }
+
+    // Package-private for the "no demo tenant yet" test; callers need the
+    // super-admin context and a transaction, as reset() provides.
+    void deleteExisting() {
         List<UUID> tenantIds = tenantRepository.findAll().stream()
                 .filter(t -> DEMO_BUSINESS_NAME.equals(t.getBusinessName()))
                 .map(Tenant::getId)
